@@ -23,6 +23,7 @@ namespace Marisa.CodexPetAdapter;
     使用 Codex pet 精灵宠物作为桌宠身体。
     支持 idle、running、waving、jumping 等标准动作，以及 16 方向注视。
     可读取 %USERPROFILE%\\.codex\\pets，也支持手动指定目录。
+    获取更多宠物可以去第三方平台下载https://codex-pets.net/ 
     """,
     defaultCategory: "Alife 官方/模型接入/桌宠模型",
     EditorUI = typeof(CodexPetAdapterUI))]
