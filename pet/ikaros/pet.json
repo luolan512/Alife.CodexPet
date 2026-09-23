@@ -1,0 +1,8 @@
+{
+  "id": "ikaros",
+  "displayName": "Ikaros",
+  "description": "A chibi Ikaros desktop pet inspired by Heaven's Lost Property: pink hair, white mechanical outfit, collar and wings; green-eyed watermelon-hugging low flight for left/right movement, red-eyed empty-handed execution, green-eyed thoughtful review, and 16 looking directions.",
+  "spritesheetPath": "spritesheet.webp",
+  "spriteVersionNumber": 2,
+  "kind": "animal"
+}

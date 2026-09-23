@@ -1,0 +1,62 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bubble-font-size: 13px;
+    --bubble-scale: 0.6;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: "Microsoft YaHei", sans-serif;
+    user-select: none;
+}
+
+#petCanvas {
+    position: absolute;
+    left: 0;
+    /* top 与 height 由 main.js 根据气泡区高度动态设置 */
+    cursor: grab;
+}
+
+#petCanvas:active {
+    cursor: grabbing;
+}
+
+.subtitle {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(8em + 28px * var(--bubble-scale) + 2px);
+    max-width: calc(8em + 28px * var(--bubble-scale) + 2px);
+    max-height: calc(6em + 20px * var(--bubble-scale) + 2px);
+    overflow: hidden;
+    padding: calc(10px * var(--bubble-scale)) calc(14px * var(--bubble-scale));
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: calc(14px * var(--bubble-scale));
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    font-size: var(--bubble-font-size);
+    line-height: 1.5;
+    color: #333;
+    text-align: center;
+    word-break: break-all;
+    white-space: normal;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+}
+
+.subtitle.visible {
+    opacity: 1;
+}
+

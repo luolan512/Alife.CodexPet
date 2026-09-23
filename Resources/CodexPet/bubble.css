@@ -1,0 +1,50 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bubble-font-size: 13px;
+    --bubble-scale: 0.6;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: "Microsoft YaHei", sans-serif;
+    user-select: none;
+}
+
+.subtitle {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
+    max-height: calc(100% - 12px);
+    overflow: hidden;
+    padding: calc(10px * var(--bubble-scale)) calc(14px * var(--bubble-scale));
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: calc(14px * var(--bubble-scale));
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    font-size: var(--bubble-font-size);
+    line-height: 1.5;
+    color: #333;
+    text-align: center;
+    word-break: break-all;
+    white-space: normal;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.subtitle.visible {
+    opacity: 1;
+    pointer-events: auto;
+    cursor: pointer;
+}
