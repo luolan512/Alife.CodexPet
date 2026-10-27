@@ -51,7 +51,12 @@ public sealed class PetTopMostKeeper : IDisposable
                     {
                         if (!form.IsDisposed && form.IsHandleCreated && form.Visible)
                         {
-                            form.TopMost = true;
+                            // Form.TopMost's setter calls SetWindowPos without
+                            // SWP_NOACTIVATE, even when it is already true. In a
+                            // Deactivate handler this steals focus back before
+                            // WebView2 can receive the user's mouse-down event.
+                            // The creation options already set the managed flag;
+                            // only reassert the native band without activation.
                             SetWindowPos(form.Handle, HwndTopMost, 0, 0, 0, 0, Flags);
                         }
                     }

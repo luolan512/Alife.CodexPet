@@ -1,6 +1,6 @@
 # Codex 桌宠 · Alife.CodexPet
 
-面向 **Windows / Alife 5.1**，当前版本 **5.1.0**。插件 ID 为 `Marisa.CodexPetAdapter`。
+面向 **Windows / Alife 5.1**，当前版本 **5.1.1**。插件 ID 为 `Marisa.CodexPetAdapter`。
 
 让 Alife 使用 Codex 格式的精灵表宠物作为桌宠。
 
