@@ -3,7 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using ElectronNET.API;
+using Alife.Client;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -30,9 +31,9 @@ public sealed class CodexPetBridge : IDisposable
             }
 
             string message = envelope.ToString(Newtonsoft.Json.Formatting.Indented);
-            Electron.IpcMain.Send(window.Window, window.ChannelId, message);
+            _ = window.Window.PostMessageAsync(message);
             if (window.BubbleWindow != null)
-                Electron.IpcMain.Send(window.BubbleWindow, window.ChannelId, message);
+                _ = window.BubbleWindow.PostMessageAsync(message);
         }
         catch (Exception ex)
         {
@@ -44,7 +45,7 @@ public sealed class CodexPetBridge : IDisposable
     {
         try
         {
-            return await window.Window.WebContents.ExecuteJavaScriptAsync<string>(script, true);
+            return await window.Window.ExecuteScriptAsync(script);
         }
         catch (Exception ex)
         {
@@ -57,12 +58,34 @@ public sealed class CodexPetBridge : IDisposable
     {
         this.window = window;
         this.logger = logger;
-        Electron.IpcMain.On(window.ChannelId, OnIpcMessage);
+
     }
 
     public void Dispose()
     {
-        Electron.IpcMain.RemoveAllListeners(window.ChannelId);
+        if (mainWindow != null) mainWindow.MessageReceived -= OnMainMessage;
+        if (bubbleWindow != null) bubbleWindow.MessageReceived -= OnBubbleMessage;
+    }
+
+    IAlifeWindow? mainWindow, bubbleWindow;
+    readonly TaskCompletionSource mainReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource bubbleReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public void Attach(IAlifeWindow main, IAlifeWindow bubble)
+    {
+        mainWindow = main; bubbleWindow = bubble;
+        main.MessageReceived += OnMainMessage;
+        bubble.MessageReceived += OnBubbleMessage;
+    }
+    void OnMainMessage(string message) { MarkReady(message, mainReady); OnIpcMessage(message); }
+    void OnBubbleMessage(string message) { MarkReady(message, bubbleReady); OnIpcMessage(message); }
+    static void MarkReady(string message, TaskCompletionSource ready)
+    {
+        try { using var doc = JsonDocument.Parse(message); if (doc.RootElement.TryGetProperty("type", out var type) && type.GetString() == "ready") ready.TrySetResult(); } catch (JsonException) { }
+    }
+    public async Task WaitReadyAsync()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await Task.WhenAll(mainReady.Task, bubbleReady.Task).WaitAsync(timeout.Token);
     }
 
     readonly CodexPetWindow window;

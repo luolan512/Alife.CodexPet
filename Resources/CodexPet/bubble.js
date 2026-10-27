@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron');
+document.addEventListener('contextmenu', event => event.preventDefault());
+const ipcRenderer = { send: (_channel, message) => window.alifeWindow.postMessage(JSON.parse(message)), on: (_channel, handler) => window.alifeWindow.onMessage(message => handler(null, message)) };
 
 const subtitleEl = document.getElementById('subtitle');
 const params = new URLSearchParams(window.location.search);
@@ -262,3 +263,5 @@ ipcRenderer.on(petChannel, (event, message) => {
         console.error('处理 IPC 消息失败:', err);
     }
 });
+
+postMessage({ type: "ready" });

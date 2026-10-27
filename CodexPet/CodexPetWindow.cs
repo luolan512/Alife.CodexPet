@@ -3,8 +3,9 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using ElectronNET.API;
-using ElectronNET.API.Entities;
+using Alife.Client;
+using Alife.Framework;
+using System.Drawing;
 
 namespace Marisa.CodexPetAdapter;
 
@@ -15,9 +16,12 @@ namespace Marisa.CodexPetAdapter;
 public class CodexPetWindow : IDisposable
 {
     public event Action<int, int>? PositionChanged;
+    PetTopMostKeeper? topMostKeeper;
+    readonly IAlifeApplication app;
+    public CodexPetWindow(IAlifeApplication app) => this.app = app;
 
-    public BrowserWindow Window => window;
-    public BrowserWindow? BubbleWindow => bubbleWindow;
+    public IAlifeWindow Window => window;
+    public IAlifeWindow? BubbleWindow => bubbleWindow;
     public string ChannelId { get; } = "codex-pet-" + Guid.NewGuid().ToString("N");
     public double Dpi => dpi;
 
@@ -47,9 +51,9 @@ public class CodexPetWindow : IDisposable
         ApplyScaleValues(scale);
         ApplyBubbleStyleValues(fontSize, bubbleScale);
 
-        Display primary = await Electron.Screen.GetPrimaryDisplayAsync();
-        dpi = primary.ScaleFactor;
-        workArea = primary.WorkArea;
+        dpi = app.GetDpiScale();
+        var screen = app.GetScreenSize();
+        workArea = new Rectangle(0, 0, (int)(screen.Width / dpi), (int)(screen.Height / dpi));
 
         defaultX = workArea.X + workArea.Width - currentWidth - 32;
         defaultY = workArea.Y + workArea.Height - currentHeight - 32;
@@ -61,70 +65,47 @@ public class CodexPetWindow : IDisposable
         string petUrl = $"{new Uri(Path.Combine(wwwRoot, "index.html")).AbsoluteUri}?petChannel={ChannelId}&v={DateTime.UtcNow.Ticks}";
         string bubbleUrl = $"{new Uri(Path.Combine(wwwRoot, "bubble.html")).AbsoluteUri}?petChannel={ChannelId}&v={DateTime.UtcNow.Ticks}";
 
-        window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions {
-            Title = "Codex 桌宠",
-            X = positionX,
-            Y = positionY,
-            Width = currentWidth,
-            Height = currentHeight,
-            AlwaysOnTop = true,
-            SkipTaskbar = true,
-            Frame = false,
-            Transparent = true,
-            HasShadow = false,
-            Show = false,
-            Movable = true,
-            Resizable = false,
-            Fullscreenable = false,
-            BackgroundColor = "#00000000",
-            WebPreferences = new WebPreferences {
-                NodeIntegration = true,
-                ContextIsolation = false,
-                Sandbox = false,
-                DevTools = true
-            }
-        }, petUrl);
-
-        bubbleWindow = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions {
-            Title = "Codex 桌宠气泡",
-            X = positionX,
-            Y = positionY,
-            Width = bubbleWindowWidth,
-            Height = bubbleWindowHeight,
-            AlwaysOnTop = true,
-            SkipTaskbar = true,
-            Frame = false,
-            Transparent = true,
-            HasShadow = false,
-            Show = false,
-            Movable = false,
-            Resizable = false,
-            Fullscreenable = false,
-            Focusable = false,
-            AcceptFirstMouse = true,
-            BackgroundColor = "#00000000",
-            WebPreferences = new WebPreferences {
-                NodeIntegration = true,
-                ContextIsolation = false,
-                Sandbox = false,
-                DevTools = true
-            }
-        }, bubbleUrl);
-
-        window.OnBoundsChanged += OnBoundsChanged;
-
-        await WaitReadyAsync(window, true);
-        await WaitReadyAsync(bubbleWindow, false);
+        window = await app.CreateWindowAsync(new AlifeWindowOptions {
+            Title = "Codex Pet", Bounds = new Rectangle(positionX, positionY, currentWidth, currentHeight),
+            TopMost = true, Resizable = false, Transparent = true, Url = petUrl
+        });
+        bubbleWindow = await app.CreateWindowAsync(new AlifeWindowOptions {
+            Title = "Codex Pet Bubble", Bounds = new Rectangle(positionX, positionY, bubbleWindowWidth, bubbleWindowHeight),
+            TopMost = true, Resizable = false, Transparent = true, Url = bubbleUrl
+        });
+        SetOpacity(window, 0);
+        SetOpacity(bubbleWindow, 0);
+        window.BoundsChanged += OnBoundsChanged;
+        bridge.Attach(window, bubbleWindow);
+        await window.Launch();
+        await bubbleWindow.Launch();
+        await bridge.WaitReadyAsync();
+        await bubbleWindow.HideAsync();
+        SetOpacity(bubbleWindow, 1);
+        await window.ShowAsync();
+        SetOpacity(window, 1);
+        topMostKeeper = new PetTopMostKeeper(window, bubbleWindow);
+        topMostKeeper.Refresh();
         UpdateBubbleBounds();
 
         bridge.SendMessage("setPetArea", new { height = 0 });
     }
 
+    static void SetOpacity(IAlifeWindow target, double opacity)
+    {
+        if (target is not System.Windows.Forms.Form form) return;
+        if (form.IsHandleCreated && form.InvokeRequired) form.Invoke(() => form.Opacity = opacity);
+        else form.Opacity = opacity;
+    }
+
     public void Dispose()
     {
-        window.OnBoundsChanged -= OnBoundsChanged;
-        bubbleWindow?.Destroy();
-        window.Destroy();
+        topMostKeeper?.Dispose();
+        topMostKeeper = null;
+        if (window == null) return;
+        window.BoundsChanged -= OnBoundsChanged;
+        if (bubbleWindow != null) _ = bubbleWindow.DisposeAsync();
+        _ = window.DisposeAsync();
     }
 
     public void ResetPosition()
@@ -133,7 +114,7 @@ public class CodexPetWindow : IDisposable
         positionY = defaultY;
         lastX = defaultX;
         lastY = defaultY;
-        window.SetBounds(new Rectangle {
+        _ = window.SetBoundsAsync(new Rectangle {
             X = positionX,
             Y = positionY,
             Width = currentWidth,
@@ -146,7 +127,7 @@ public class CodexPetWindow : IDisposable
     {
         positionX = x;
         positionY = y;
-        window.SetBounds(new Rectangle {
+        _ = window.SetBoundsAsync(new Rectangle {
             X = positionX,
             Y = positionY,
             Width = currentWidth,
@@ -158,7 +139,7 @@ public class CodexPetWindow : IDisposable
     public void SetScale(double newScale)
     {
         ApplyScaleValues(newScale);
-        window.SetBounds(new Rectangle {
+        _ = window.SetBoundsAsync(new Rectangle {
             X = positionX,
             Y = positionY,
             Width = currentWidth,
@@ -178,13 +159,20 @@ public class CodexPetWindow : IDisposable
     {
         if (bubbleWindow == null)
             return;
-        bubbleWindow.SetAlwaysOnTop(true, (OnTopLevel)7, 1);
-        bubbleWindow.ShowInactive();
+        _ = bubbleWindow.SetTopMostAsync(true);
+        _ = ShowBubbleAsync();
+    }
+
+    async Task ShowBubbleAsync()
+    {
+        if (bubbleWindow == null) return;
+        await bubbleWindow.ShowAsync();
+        topMostKeeper?.Refresh();
     }
 
     public void HideBubble()
     {
-        bubbleWindow?.Hide();
+        if (bubbleWindow != null) _ = bubbleWindow.HideAsync();
     }
 
     void UpdateBubbleBounds()
@@ -202,26 +190,12 @@ public class CodexPetWindow : IDisposable
         if (x + bubbleWindowWidth > workArea.X + workArea.Width)
             x = workArea.X + workArea.Width - bubbleWindowWidth;
 
-        bubbleWindow.SetBounds(new Rectangle {
+        _ = bubbleWindow.SetBoundsAsync(new Rectangle {
             X = x,
             Y = y,
             Width = bubbleWindowWidth,
             Height = bubbleWindowHeight
         });
-    }
-
-    async Task WaitReadyAsync(BrowserWindow target, bool show)
-    {
-        TaskCompletionSource tcs = new();
-        target.OnReadyToShow += () => {
-            target.SetAlwaysOnTop(true, (OnTopLevel)7, 1);
-            if (show)
-                target.Show();
-            else
-                target.Hide();
-            tcs.TrySetResult();
-        };
-        await tcs.Task;
     }
 
     void ApplyScaleValues(double newScale)
@@ -260,8 +234,8 @@ public class CodexPetWindow : IDisposable
             PositionChanged?.Invoke(dx, dy);
     }
 
-    BrowserWindow window = null!;
-    BrowserWindow? bubbleWindow;
+    IAlifeWindow window = null!;
+    IAlifeWindow? bubbleWindow;
     double dpi = 1.0;
     double scale = 1.0;
     int currentWidth;

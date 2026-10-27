@@ -1,4 +1,6 @@
-# Marisa.CodexPetAdapter
+# Codex 桌宠 · Alife.CodexPet
+
+面向 **Windows / Alife 5.1**，当前版本 **5.1.0**。插件 ID 为 `Marisa.CodexPetAdapter`。
 
 让 Alife 使用 Codex 格式的精灵表宠物作为桌宠。
 
@@ -8,7 +10,7 @@
 - 支持手动指定 pets 目录。
 - 将 Codex 宠物的标准动作（idle、running、waving、jumping 等）暴露给 Alife AI。
 - 支持 16 方向注视作为 Expression 调用。
-- 通过 Electron 透明窗口渲染 8x11 精灵表。
+- 复用 Alife 官方原生窗口与 WebView2 渲染 8x11 精灵表，桌宠和气泡使用独立窗口。
 
 ## 文件结构
 
@@ -21,8 +23,8 @@ Marisa.CodexPetAdapter/
 ├── CodexPet/
 │   ├── CodexPetModel.cs            # 宠物数据模型
 │   ├── CodexPetScanner.cs          # 目录扫描器
-│   ├── CodexPetBridge.cs           # Electron IPC 桥
-│   └── CodexPetWindow.cs           # Electron 窗口
+│   ├── CodexPetBridge.cs           # 原生窗口消息桥
+│   └── CodexPetWindow.cs           # 官方原生窗口
 └── Resources/CodexPet/
     ├── index.html
     ├── style.css
@@ -71,3 +73,11 @@ Marisa.CodexPetAdapter/
 - 配置通过 `ConfigurationSystem` 持久化。
 - 本插件只提供一个模块入口 **Codex 桌宠**，不再拆分为配置模块和渲染模块。
 
+
+## 安装与更新
+
+依赖 `Alife.Function.DeskPet`。将发布 ZIP 内容解压到 `Storage/Plugins/Marisa.CodexPetAdapter/`，使 manifest.json 位于该目录根部。退出客户端后升级，重新加载插件或重启 Alife，再启用 Codex 桌宠渲染器。
+
+可选择用户 Codex pets 目录或自定义目录；关闭默认路径选项且自定义目录留空时使用插件内置 pet/ 模型。本仓库附带 Ikaros 模型。
+
+本次适配官方窗口，修复右键原生菜单、启动闪窗、独立气泡定位和缩放，并增加不抢焦点的置顶维护。发布包不含客户端、临时数据或个人配置。更新说明见 CHANGELOG.md。

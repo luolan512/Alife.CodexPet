@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Alife.Framework;
 using Alife.Function.DeskPet;
-using ElectronNET.API;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -23,11 +22,12 @@ namespace Marisa.CodexPetAdapter;
     使用 Codex pet 精灵宠物作为桌宠身体。
     支持 idle、running、waving、jumping 等标准动作，以及 16 方向注视。
     可读取 %USERPROFILE%\\.codex\\pets，也支持手动指定目录。
-    获取更多宠物可以去第三方平台下载https://codex-pets.net/ 
+    获取更多宠物可以去第三方平台下载https://codex-pets.net/
     """,
     defaultCategory: "Alife 官方/模型接入/桌宠模型",
     EditorUI = typeof(CodexPetAdapterUI))]
 public class CodexPetRenderer(
+    IAlifeApplication alifeApplication,
     PluginSystem pluginSystem,
     StorageSystem storageSystem,
     ConfigurationSystem configurationSystem,
@@ -323,6 +323,7 @@ public class CodexPetRenderer(
 
         ServiceCollection services = new();
         services.AddSingleton(logger);
+        services.AddSingleton(alifeApplication);
         services.AddSingleton(storageSystem);
         services.AddSingleton(model);
         services.AddSingleton<CodexPetWindow>();
@@ -425,6 +426,12 @@ public class CodexPetRenderer(
         }
     }
 
+    System.Drawing.Point CursorInWindowCoordinates() {
+        var point = alifeApplication.GetCursorPosition();
+        var dpi = alifeApplication.GetDpiScale();
+        return new System.Drawing.Point((int)(point.X / dpi), (int)(point.Y / dpi));
+    }
+
     async Task StartGrabAsync()
     {
         if (isGrabbing || window == null)
@@ -432,7 +439,7 @@ public class CodexPetRenderer(
 
         try
         {
-            System.Drawing.Point cursor = await Electron.Screen.GetCursorScreenPointAsync();
+            System.Drawing.Point cursor = CursorInWindowCoordinates();
             grabOffsetX = cursor.X - window.PositionX;
             grabOffsetY = cursor.Y - window.PositionY;
             isGrabbing = true;
@@ -449,7 +456,7 @@ public class CodexPetRenderer(
     {
         while (isGrabbing && window != null && DestroyCancellationToken.IsCancellationRequested == false)
         {
-            System.Drawing.Point cursor = await Electron.Screen.GetCursorScreenPointAsync();
+            System.Drawing.Point cursor = CursorInWindowCoordinates();
             window.MoveTo(cursor.X - grabOffsetX, cursor.Y - grabOffsetY);
             await Task.Delay(16);
         }
@@ -693,7 +700,7 @@ public class CodexPetRenderer(
 
         try
         {
-            System.Drawing.Point cursor = await Electron.Screen.GetCursorScreenPointAsync();
+            System.Drawing.Point cursor = CursorInWindowCoordinates();
             long now = Environment.TickCount64;
 
             // 第一次采样只记录位置，不立刻注视；后续鼠标真正移动才触发“看一眼”。

@@ -24,7 +24,7 @@ public static class CodexPetScanner
     /// 插件自带宠物目录：Alife 程序目录下的 Storage\Plugins\Marisa.CodexPetAdapter\pet。
     /// </summary>
     public static string BuiltinPetsPath =>
-        ResolvePath(Path.Combine("Storage", "Plugins", "Marisa.CodexPetAdapter", "pet"));
+        Path.Combine(Alife.Foundation.AlifePath.StorageFolderPath, "Plugins", "Marisa.CodexPetAdapter", "pet");
 
     /// <summary>
     /// 相对路径按 Alife 程序目录解析；绝对路径原样返回。

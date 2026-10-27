@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron');
+document.addEventListener('contextmenu', event => event.preventDefault());
+const ipcRenderer = { send: (_channel, message) => window.alifeWindow.postMessage(JSON.parse(message)), on: (_channel, handler) => window.alifeWindow.onMessage(message => handler(null, message)) };
 
 const canvas = document.getElementById('petCanvas');
 const ctx = canvas.getContext('2d');
